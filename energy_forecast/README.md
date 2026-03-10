@@ -1,22 +1,25 @@
 # 🛢️ Energy Commodity Price Forecaster
 
-Projecto Python para previsão de preços de commodities de energia com modelos **ARIMA/SARIMA**.
+Python project for forecasting energy commodity prices using **ARIMA/SARIMA** time series models.
+
+> Part of a multi-model forecasting portfolio. Future modules will cover LSTM, XGBoost, Prophet, and hybrid approaches.
 
 ---
 
-## 📁 Estrutura do Projecto
+## 📁 Project Structure
 
 ```
 energy_forecast/
-├── main.py                  ← Pipeline principal (ponto de entrada)
-├── requirements.txt         ← Dependências
+├── main.py                      ← Main pipeline (entry point)
+├── requirements.txt             ← Python dependencies
 ├── data/
-│   ├── fetcher.py           ← Download e cache de dados via yfinance
-│   └── commodities.csv      ← Cache gerada automaticamente
+│   ├── fetcher.py               ← Data download and caching via yfinance
+│   └── commodities.csv          ← Auto-generated price cache
 ├── models/
-│   ├── arima_model.py       ← Classe ArimaForecaster + testes de estacionaridade
-│   └── plots.py             ← Todas as funções de visualização
-└── results/                 ← Gráficos e CSVs gerados automaticamente
+│   ├── arima_model.py           ← ArimaForecaster class + stationarity tests
+│   ├── plots.py                 ← All visualisation functions (USD-labelled)
+│   └── report_generator.py      ← Auto-generated PDF report per commodity
+└── results/                     ← Auto-generated charts, CSVs and PDF reports
     ├── all_series.png
     ├── correlation.png
     ├── <commodity>_acf_pacf.png
@@ -25,111 +28,116 @@ energy_forecast/
     ├── <commodity>_validation.png
     ├── <commodity>_forecast.png
     ├── <commodity>_forecast.csv
+    ├── <commodity>_report.pdf
     └── summary.csv
 ```
 
 ---
 
-## 🚀 Instalação
+## 🚀 Installation
 
 ```bash
-# 1. Clonar / copiar o projecto
-cd energy_forecast
+# 1. Clone the repository
+git clone https://github.com/FThierstein/energy-commodity-forecaster-ARIMA.git
+cd energy-commodity-forecaster-ARIMA
 
-# 2. Criar ambiente virtual (recomendado)
+# 2. Create a virtual environment (recommended)
 python -m venv venv
-source venv/bin/activate        # Linux/Mac
+source venv/bin/activate        # Linux / Mac
 venv\Scripts\activate           # Windows
 
-# 3. Instalar dependências
+# 3. Install dependencies
 pip install -r requirements.txt
 ```
 
 ---
 
-## ▶️ Utilização
+## ▶️ Usage
 
-### Execução básica (30 dias de previsão)
+### Basic run (30-day forecast)
 ```bash
 python main.py
 ```
 
-### Opções disponíveis
+### Available options
 ```bash
-python main.py --forecast-days 60   # prever 60 dias úteis
-python main.py --test-size 90       # 90 observações no teste
-python main.py --seasonal           # usar SARIMA (componente sazonal semanal)
+python main.py --forecast-days 60   # forecast 60 trading days ahead
+python main.py --test-size 90       # use 90 observations in the test set
+python main.py --seasonal           # use SARIMA (weekly seasonal component)
 
-# Combinar opções
+# Combine options
 python main.py --forecast-days 30 --test-size 60 --seasonal
 ```
 
 ---
 
-## 📊 Commodities Cobertas
+## 📊 Commodities Covered
 
-| Nome         | Ticker  | Descrição                          |
-|--------------|---------|------------------------------------|
-| WTI_Oil      | CL=F    | Petróleo WTI (West Texas)          |
-| Brent_Oil    | BZ=F    | Petróleo Brent (referência europeia)|
-| Natural_Gas  | NG=F    | Gás Natural (Henry Hub)            |
-| Coal         | KOL     | Carvão (ETF VanEck Coal)           |
-| Electricity  | ICLN    | Eletricidade (ETF iShares Clean Energy) |
+| Name         | Ticker       | Description                          | Unit          |
+|--------------|--------------|--------------------------------------|---------------|
+| WTI_Oil      | CL=F / USO   | WTI Crude Oil (West Texas)           | USD / barrel  |
+| Brent_Oil    | BZ=F / BNO   | Brent Crude Oil (European benchmark) | USD / barrel  |
+| Natural_Gas  | NG=F / UNG   | Natural Gas (Henry Hub)              | USD / MMBtu   |
+| Coal         | KOL / ARCH   | Coal (VanEck Coal ETF)               | USD / share   |
+| Electricity  | ICLN / FSLR  | Electricity (iShares Clean Energy)   | USD / share   |
 
----
-
-## 🔬 Pipeline Detalhado
-
-### 1. Download de Dados
-- Fonte: **Yahoo Finance** via `yfinance`
-- Histórico desde 2015 (≈ 10 anos)
-- Cache automática em `data/commodities.csv` (evita downloads repetidos)
-
-### 2. Análise Exploratória
-- Gráfico de séries temporais individuais
-- Matriz de correlação dos retornos diários
-
-### 3. Por Commodity
-1. **ACF / PACF** – identificação visual de autocorrelações
-2. **Testes de estacionaridade**
-   - Augmented Dickey-Fuller (ADF): H₀ = raiz unitária → *p < 0.05* ⟹ estacionária
-   - KPSS: H₀ = estacionária → *p > 0.05* ⟹ estacionária
-3. **Auto-ARIMA** – `pmdarima.auto_arima` selecciona (p,d,q) por AIC
-4. **Treino SARIMAX** – via `statsmodels`
-5. **Diagnóstico** – análise de resíduos (4 gráficos)
-6. **Validação Walk-Forward** – previsão 1-passo com expansão de janela
-   - Métricas: MAE, RMSE, MAPE
-7. **Previsão** – horizonte futuro com intervalo de confiança 95%
-
-### 4. Resumo
-- `results/summary.csv` com métricas e previsão final de cada commodity
+> All prices are denominated in **US Dollars (USD)**. Futures tickers are tried first; ETF tickers are used as fallback.
 
 ---
 
-## 📈 Exemplo de Output (summary.csv)
+## 🔬 Pipeline Overview
 
-| Commodity   | Modelo       | MAE    | RMSE   | MAPE_% | Previsão_30d |
-|-------------|--------------|--------|--------|--------|--------------|
-| WTI_Oil     | ARIMA(1,1,1) | 1.23   | 1.87   | 1.54   | 78.32        |
-| Natural_Gas | ARIMA(2,1,2) | 0.08   | 0.11   | 2.31   | 2.64         |
-| ...         | ...          | ...    | ...    | ...    | ...          |
+### 1. Data Download
+- Source: **Yahoo Finance** via `yfinance`
+- History from 2015 to present (~10 years)
+- Automatic cache in `data/commodities.csv` (avoids repeated downloads)
+
+### 2. Exploratory Analysis
+- Individual time series charts (USD, with units)
+- Pearson correlation matrix of daily returns
+
+### 3. Per Commodity
+1. **ACF / PACF** — visual identification of autocorrelation structure
+2. **Stationarity tests**
+   - Augmented Dickey-Fuller (ADF): H₀ = unit root → *p < 0.05* ⟹ stationary
+   - KPSS: H₀ = stationary → *p > 0.05* ⟹ stationary
+3. **Auto-ARIMA** — `pmdarima.auto_arima` selects (p,d,q) by AIC minimisation
+4. **SARIMAX training** — via `statsmodels`
+5. **Residual diagnostics** — 4-panel chart
+6. **Walk-forward validation** — 1-step expanding window
+   - Metrics: MAE (USD), RMSE (USD), MAPE (%)
+7. **Forecast** — N trading days ahead with 95% confidence interval
+8. **PDF report** — auto-generated per commodity via `reportlab`
+
+### 4. Summary
+- `results/summary.csv` with metrics and final forecast value per commodity
 
 ---
 
-## 🧩 Extensões Sugeridas
+## 📈 Example Output (summary.csv)
 
-| Ideia                     | Como implementar                                      |
-|---------------------------|-------------------------------------------------------|
-| Mais features (exógenas)  | Usar SARIMAX com variáveis como USD index, temperatura|
-| Comparar com LSTM         | Adicionar `models/lstm_model.py`                      |
-| Dashboard interactivo     | Integrar com `streamlit` ou `dash`                    |
-| Alertas de preço          | Adicionar notificações por email / Telegram           |
-| Deploy automatizado       | Agendar com `cron` ou GitHub Actions                  |
+| Commodity   | Model        | MAE (USD) | RMSE (USD) | MAPE (%) | Forecast_30d (USD) |
+|-------------|--------------|-----------|------------|----------|--------------------|
+| WTI_Oil     | ARIMA(1,1,1) | 1.23      | 1.87       | 1.54     | 78.32              |
+| Natural_Gas | ARIMA(2,1,2) | 0.08      | 0.11       | 2.31     | 2.64               |
+| ...         | ...          | ...       | ...        | ...      | ...                |
 
 ---
 
-## 📝 Notas
+## 🧩 Suggested Extensions
 
-- Os dados são preços de fecho de **futuros / ETFs** e **não** constituem aconselhamento financeiro.
-- O ARIMA funciona melhor em horizontes **curtos** (≤ 30 dias). Para horizontes longos considera modelos híbridos.
-- A primeira execução pode demorar 2–5 minutos (download + auto_arima).
+| Idea                        | How to implement                                         |
+|-----------------------------|----------------------------------------------------------|
+| Exogenous features          | Use SARIMAX with USD index, temperature, inventory data  |
+| Compare with LSTM           | Add `models/lstm_model.py`                               |
+| Interactive dashboard       | Integrate with `streamlit` or `dash`                     |
+| Price alerts                | Add email / Telegram notifications                       |
+| Automated deployment        | Schedule with `cron` or GitHub Actions                   |
+
+---
+
+## 📝 Notes
+
+- Data consists of **futures / ETF closing prices** and does **not** constitute financial advice.
+- ARIMA performs best over **short horizons** (≤ 30 days). For longer horizons, consider hybrid models.
+- First run may take 2–5 minutes (data download + auto_arima order selection).
